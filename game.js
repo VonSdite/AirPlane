@@ -153,6 +153,8 @@
     spawnTimer: 0,
     bossMinionTimer: 0,
     endlessBossWaveActive: false,
+    endlessStartScore: 0,
+    endlessBossInterval: 7600,
     nextEndlessBossScore: 23800,
     currentBossLabel: "",
     stars: createStars(),
@@ -250,6 +252,8 @@
     game.spawnTimer = 0.4;
     game.bossMinionTimer = 2.4;
     game.endlessBossWaveActive = false;
+    game.endlessStartScore = 0;
+    game.endlessBossInterval = 7600;
     game.nextEndlessBossScore = 23800;
     game.currentBossLabel = "";
     game.enemies = [];
@@ -535,8 +539,8 @@
     if (bossKind === "hornet") {
       boss.label = "蜂群女王";
       boss.radius = 66;
-      boss.hp = 1480;
-      boss.defense = 3;
+      boss.hp = 2300;
+      boss.defense = 4;
       boss.value = 980;
       boss.exp = 260;
       boss.touchDamage = 34;
@@ -544,8 +548,8 @@
     } else if (bossKind === "manta") {
       boss.label = "钢翼魔鬼鱼";
       boss.radius = 72;
-      boss.hp = 2280;
-      boss.defense = 5;
+      boss.hp = 3600;
+      boss.defense = 6;
       boss.value = 1260;
       boss.exp = 340;
       boss.touchDamage = 38;
@@ -553,8 +557,8 @@
     } else if (bossKind === "core") {
       boss.label = "蚀光核心";
       boss.radius = 74;
-      boss.hp = 3320;
-      boss.defense = 7;
+      boss.hp = 5200;
+      boss.defense = 9;
       boss.value = 1680;
       boss.exp = 420;
       boss.touchDamage = 42;
@@ -563,8 +567,8 @@
     } else if (bossKind === "carrier") {
       boss.label = "泰坦母舰";
       boss.radius = 82;
-      boss.hp = 4560;
-      boss.defense = 10;
+      boss.hp = 7200;
+      boss.defense = 13;
       boss.value = 2350;
       boss.exp = 520;
       boss.touchDamage = 48;
@@ -572,8 +576,8 @@
     } else if (bossKind === "seraph") {
       boss.label = "虚空炽天使";
       boss.radius = 76;
-      boss.hp = 6120;
-      boss.defense = 13;
+      boss.hp = 9800;
+      boss.defense = 18;
       boss.value = 3200;
       boss.exp = 640;
       boss.touchDamage = 54;
@@ -590,8 +594,34 @@
     return boss;
   }
 
+  function getEndlessDepth() {
+    return Math.max(0, game.score - game.endlessStartScore);
+  }
+
   function getEndlessScale() {
-    return 1 + Math.max(0, game.score - STAGES[4].targetScore) / 18000;
+    return 1 + getEndlessDepth() / 30000;
+  }
+
+  function getEndlessBossInterval() {
+    return Math.max(4600, 7600 - Math.floor(getEndlessDepth() / 10));
+  }
+
+  function getEndlessStageBonus() {
+    return 1 + Math.floor(getEndlessDepth() / 14000);
+  }
+
+  function pickEnemyForEndless() {
+    const depth = getEndlessDepth();
+    if (depth < 5000) {
+      return pickOne(["scout", "scout", "lancer"]);
+    }
+    if (depth < 12000) {
+      return pickOne(["scout", "lancer", "lancer", "orbiter"]);
+    }
+    if (depth < 22000) {
+      return pickOne(["scout", "lancer", "orbiter", "orbiter", "fortress"]);
+    }
+    return pickEnemyForStage();
   }
 
   function pickEnemyForStage() {
@@ -631,7 +661,11 @@
     game.endless = true;
     game.stageIndex = STAGES.length - 1;
     game.endlessBossWaveActive = false;
-    game.nextEndlessBossScore = Math.max(game.nextEndlessBossScore, game.score + 3800);
+    game.spawnTimer = 0.95;
+    game.bossMinionTimer = 2.8;
+    game.endlessStartScore = game.score;
+    game.endlessBossInterval = getEndlessBossInterval();
+    game.nextEndlessBossScore = game.score + game.endlessBossInterval;
     showBanner("第 5 关完成，进入无限模式", 2600);
     createFloatingText(W / 2, H / 2, "无限模式开启", "#ffd46d", 1.6, 0);
     syncModeText();
@@ -656,7 +690,8 @@
     if (game.endless) {
       if (game.bosses.length === 0) {
         game.endlessBossWaveActive = false;
-        game.nextEndlessBossScore = Math.max(game.nextEndlessBossScore, game.score + 3800);
+        game.endlessBossInterval = getEndlessBossInterval();
+        game.nextEndlessBossScore = game.score + game.endlessBossInterval;
       } else {
         game.currentBossLabel = `剩余 ${game.bosses.length} 名 Boss`;
       }
@@ -666,12 +701,13 @@
   }
 
   function spawnEndlessBossWave() {
-    const count = Math.min(3, 1 + Math.floor(Math.max(0, game.score - 30000) / 15000));
+    const depth = getEndlessDepth();
+    const count = Math.min(3, 1 + Math.floor(Math.max(0, depth - 22000) / 18000));
     const spread = W / (count + 1);
     for (let i = 0; i < count; i += 1) {
       const bossIndex = clamp(Math.floor(rand(1, BOSS_ORDER.length)), 1, BOSS_ORDER.length - 1);
       const boss = createBoss(BOSS_ORDER[bossIndex], {
-        scale: 1 + (getEndlessScale() - 1) * 0.82,
+        scale: 1 + (getEndlessScale() - 1) * 0.65,
         x: spread * (i + 1)
       });
       game.bosses.push(boss);
@@ -691,14 +727,15 @@
       game.spawnTimer -= dt;
       if (game.spawnTimer <= 0 && game.enemies.length < 18) {
         const scale = getEndlessScale();
-        const burst = clamp(Math.floor((game.score - 14000) / 9000) + 1, 1, 3);
+        const depth = getEndlessDepth();
+        const burst = clamp(Math.floor(depth / 14000) + 1, 1, 3);
         for (let i = 0; i < burst; i += 1) {
-          spawnEnemy(pickEnemyForStage(), {
+          spawnEnemy(pickEnemyForEndless(), {
             scale,
-            stageBonus: 2 + Math.floor(scale)
+            stageBonus: getEndlessStageBonus()
           });
         }
-        game.spawnTimer = Math.max(0.28, 0.82 - (scale - 1) * 0.18);
+        game.spawnTimer = Math.max(0.42, 1.02 - (scale - 1) * 0.14);
       }
 
       if (!game.endlessBossWaveActive && game.score >= game.nextEndlessBossScore) {
@@ -708,11 +745,11 @@
       if (stageBossActive()) {
         game.bossMinionTimer -= dt;
         if (game.bossMinionTimer <= 0 && game.enemies.length < 22) {
-          spawnEnemy(pickEnemyForStage(), {
+          spawnEnemy(pickEnemyForEndless(), {
             scale: getEndlessScale(),
-            stageBonus: 2 + Math.floor(getEndlessScale())
+            stageBonus: getEndlessStageBonus()
           });
-          game.bossMinionTimer = Math.max(1.35, 2.4 - (getEndlessScale() - 1) * 0.35);
+          game.bossMinionTimer = Math.max(1.7, 2.8 - (getEndlessScale() - 1) * 0.25);
         }
       }
       return;
@@ -1356,9 +1393,6 @@
     game.playerBullets = game.playerBullets.filter((bullet) => {
       if (bullet.dead || bullet.life <= 0) {
         return false;
-      }
-      if (bullet.bounceLeft > 0) {
-        return true;
       }
       return bullet.x > -40 && bullet.x < W + 40 && bullet.y > -40 && bullet.y < H + 40;
     });
@@ -2171,7 +2205,7 @@
     const progressRatio = game.endless
       ? stageBossActive()
         ? 1
-        : clamp((game.score - (game.nextEndlessBossScore - 3800)) / 3800, 0, 1)
+        : clamp((game.score - (game.nextEndlessBossScore - game.endlessBossInterval)) / game.endlessBossInterval, 0, 1)
       : stageBossActive()
         ? 1
         : getStageGateProgress();
