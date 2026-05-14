@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>星穹机战</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="game-shell">
+    <section class="playfield-panel">
+      <div class="playfield-frame">
+        <div class="canvas-shell">
+          <div class="canvas-toolbar">
+            <button class="action-btn toolbar-btn" type="button" data-help="controls">操作</button>
+            <button class="action-btn toolbar-btn" type="button" data-help="rules">规则</button>
+            <span id="toolbarStageLabel" class="toolbar-stage">第 1 关 · 边境哨戒</span>
+          </div>
+          <canvas id="gameCanvas" width="1200" height="840" aria-label="星穹机战游戏画布"></canvas>
+          <div class="overlay" id="overlay">
+            <div class="overlay-card">
+              <p class="eyebrow" id="overlayTag">HTML Plane War</p>
+              <h1 id="overlayTitle">星穹机战</h1>
+              <p id="overlayText">空格开始 · P 暂停 · WASD / 方向键移动</p>
+            </div>
+          </div>
+          <div class="stage-banner" id="stageBanner"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="info-modal" id="infoModal" aria-hidden="true">
+    <div class="info-backdrop" id="infoBackdrop"></div>
+    <section class="info-panel" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+      <div class="row modal-head">
+        <div>
+          <p class="section-label">战场备忘</p>
+          <h3 id="infoTitle">操作</h3>
+        </div>
+        <button id="closeInfoBtn" class="close-btn" type="button" aria-label="关闭">×</button>
+      </div>
+      <div id="infoBody" class="info-modal-body"></div>
+    </section>
+  </div>
+
+  <template id="controlsTemplate">
+    <div class="info-group">
+      <p class="info-heading">基础操作</p>
+      <ul class="info-list compact-list">
+        <li>空格：开始游戏 / 结算后重开</li>
+        <li>P：暂停 / 继续</li>
+        <li>WASD / 方向键：移动飞机</li>
+        <li>战机会自动连续射击</li>
+      </ul>
+    </div>
+    <div class="info-group">
+      <p class="info-heading">战斗提示</p>
+      <ul class="info-list compact-list">
+        <li>受击时会短暂显示血条，安全后自动隐藏</li>
+        <li>升级会提升数值，并强化子弹形态</li>
+        <li>补给重复拾取只刷新持续时间，不会叠加时长</li>
+      </ul>
+    </div>
+  </template>
+
+  <template id="rulesTemplate">
+    <div class="info-group">
+      <p class="info-heading">核心规则</p>
+      <ul class="info-list compact-list">
+        <li>共 5 关，每关要同时满足分数和最短关卡时长才会进入 Boss 战</li>
+        <li>每关新增 1 种敌机，Boss 战期间也会继续刷新小飞机</li>
+        <li>补血、散射、无敌、反弹可以同时生效</li>
+        <li>击败第 5 关 Boss 后进入无限模式，高分时会同屏多 Boss</li>
+      </ul>
+    </div>
+    <div class="info-group">
+      <p class="info-heading">关卡情报</p>
+      <div class="stage-intel">
+        <span>1 · 棱蜂侦察机</span>
+        <span>2 · 裂枪突击艇</span>
+        <span>3 · 轨环浮游核</span>
+        <span>4 · 堡垒重装舰</span>
+        <span>5 · 幻影折跃机</span>
+      </div>
+    </div>
+  </template>
+
+  <script src="game.js"></script>
+</body>
+</html>
