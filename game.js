@@ -1149,8 +1149,8 @@
     }
   }
 
-  function createFloatingText(x, y, text, color = "#ffffff", life = 0.9, vy = -28) {
-    game.floatingTexts.push({ x, y, text, color, life, maxLife: life, vy });
+  function createFloatingText(x, y, text, color = "#ffffff", life = 0.9, vy = -28, size = 16) {
+    game.floatingTexts.push({ x, y, text, color, life, maxLife: life, vy, size });
   }
 
   function giveExp(amount) {
@@ -1167,6 +1167,7 @@
       player.speed += 8;
       player.levelUpGlow = 1.1;
       createBurst(player.x, player.y, "#ffe48e", 16, 3.1);
+      createFloatingText(player.x, player.y - 54, "LEVEL UP", "#ffffff", 0.85, -16, 12);
       createFloatingText(player.x, player.y - 36, `Lv.${player.level}`, "#ffe48e", 1.1, -24);
       showBanner(`等级提升至 ${player.level}`, 1200);
     }
@@ -1260,6 +1261,7 @@
     if (pickup.type === "heal") {
       const amount = Math.round(player.maxHp * 0.32);
       player.hp = Math.min(player.maxHp, player.hp + amount);
+      player.showHealthUntil = game.time + 1.7;
       createFloatingText(player.x, player.y - 28, `+${amount} HP`, "#90ffb8", 0.9, -24);
     } else {
       player.buffs[pickup.type] = BUFFS[pickup.type].duration;
@@ -2083,7 +2085,7 @@
     ctx.textBaseline = "middle";
     ctx.font = "bold 13px Trebuchet MS";
     const startX = 28;
-    let y = 20;
+    let y = 54;
     for (const boss of game.bosses) {
       const width = W - 56;
       ctx.fillStyle = "rgba(7, 19, 30, 0.78)";
@@ -2114,12 +2116,12 @@
 
   function drawFloatingTexts() {
     ctx.save();
-    ctx.font = "bold 16px Trebuchet MS";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     for (const item of game.floatingTexts) {
       ctx.globalAlpha = clamp(item.life / item.maxLife, 0, 1);
       ctx.fillStyle = item.color;
+      ctx.font = `bold ${item.size ?? 16}px Trebuchet MS`;
       ctx.fillText(item.text, item.x, item.y);
     }
     ctx.restore();
@@ -2158,7 +2160,7 @@
 
   function drawStageTitle() {
     const titleX = 18;
-    const titleY = game.bosses.length ? 18 + game.bosses.length * 28 + 18 : 54;
+    const titleY = game.bosses.length ? 54 + game.bosses.length * 28 + 18 : 54;
     const progressLabel = game.endless
       ? stageBossActive()
         ? "Boss 波次进行中"
@@ -2197,7 +2199,7 @@
     const buffs = getActiveBuffs();
     const hudWidth = 282;
     const sectionX = W - hudWidth - 18;
-    const startY = game.bosses.length ? 18 + game.bosses.length * 28 + 10 : 18;
+    const startY = game.bosses.length ? 54 + game.bosses.length * 28 + 10 : 18;
     let rowY = startY;
 
     ctx.save();
