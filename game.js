@@ -154,7 +154,7 @@
     bossMinionTimer: 0,
     endlessBossWaveActive: false,
     endlessStartScore: 0,
-    endlessBossInterval: 7600,
+    endlessBossInterval: 9600,
     nextEndlessBossScore: 23800,
     currentBossLabel: "",
     stars: createStars(),
@@ -253,7 +253,7 @@
     game.bossMinionTimer = 2.4;
     game.endlessBossWaveActive = false;
     game.endlessStartScore = 0;
-    game.endlessBossInterval = 7600;
+    game.endlessBossInterval = 9600;
     game.nextEndlessBossScore = 23800;
     game.currentBossLabel = "";
     game.enemies = [];
@@ -528,6 +528,8 @@
       burstTimer: 1.5,
       phaseTimer: 0,
       summonTimer: 3,
+      phase: 1,
+      phaseCount: 2,
       age: 0,
       color: "#ff8c75",
       movePhase: Math.random() * PI * 2,
@@ -539,8 +541,8 @@
     if (bossKind === "hornet") {
       boss.label = "蜂群女王";
       boss.radius = 66;
-      boss.hp = 2300;
-      boss.defense = 4;
+      boss.hp = 3200;
+      boss.defense = 5;
       boss.value = 980;
       boss.exp = 260;
       boss.touchDamage = 34;
@@ -548,8 +550,8 @@
     } else if (bossKind === "manta") {
       boss.label = "钢翼魔鬼鱼";
       boss.radius = 72;
-      boss.hp = 3600;
-      boss.defense = 6;
+      boss.hp = 5200;
+      boss.defense = 7;
       boss.value = 1260;
       boss.exp = 340;
       boss.touchDamage = 38;
@@ -557,8 +559,8 @@
     } else if (bossKind === "core") {
       boss.label = "蚀光核心";
       boss.radius = 74;
-      boss.hp = 5200;
-      boss.defense = 9;
+      boss.hp = 7600;
+      boss.defense = 10;
       boss.value = 1680;
       boss.exp = 420;
       boss.touchDamage = 42;
@@ -567,8 +569,8 @@
     } else if (bossKind === "carrier") {
       boss.label = "泰坦母舰";
       boss.radius = 82;
-      boss.hp = 7200;
-      boss.defense = 13;
+      boss.hp = 10800;
+      boss.defense = 15;
       boss.value = 2350;
       boss.exp = 520;
       boss.touchDamage = 48;
@@ -576,13 +578,14 @@
     } else if (bossKind === "seraph") {
       boss.label = "虚空炽天使";
       boss.radius = 76;
-      boss.hp = 9800;
-      boss.defense = 18;
+      boss.hp = 15800;
+      boss.defense = 22;
       boss.value = 3200;
       boss.exp = 640;
       boss.touchDamage = 54;
       boss.color = "#ffa1f4";
       boss.dashTimer = 2.3;
+      boss.phaseCount = 3;
     }
 
     boss.maxHp = Math.round(boss.hp * stageScale);
@@ -594,32 +597,68 @@
     return boss;
   }
 
+  function getBossPhaseTarget(boss) {
+    const hpRatio = boss.hp / boss.maxHp;
+    if (boss.bossKind === "seraph") {
+      if (hpRatio <= 0.32) {
+        return 3;
+      }
+      if (hpRatio <= 0.68) {
+        return 2;
+      }
+      return 1;
+    }
+    return hpRatio <= 0.45 ? 2 : 1;
+  }
+
+  function getBossPhaseText(boss) {
+    return boss.phase === 3 ? "三阶段" : "二阶段";
+  }
+
+  function updateBossPhase(boss) {
+    const targetPhase = getBossPhaseTarget(boss);
+    if (targetPhase <= boss.phase) {
+      return;
+    }
+
+    boss.phase = targetPhase;
+    boss.phaseTimer = 0;
+    boss.fireTimer = Math.min(boss.fireTimer, 0.18);
+    boss.burstTimer = Math.min(boss.burstTimer, 0.7);
+    boss.summonTimer = Math.min(boss.summonTimer, 1.2);
+    createBurst(boss.x, boss.y, boss.color, 22 + boss.phase * 4, 3.6);
+    createFloatingText(boss.x, boss.y - boss.radius - 24, getBossPhaseText(boss), "#fff2d1", 1, -12, 14);
+    if (game.bosses.length === 1) {
+      showBanner(`${boss.label} 进入${getBossPhaseText(boss)}`, 1800);
+    }
+  }
+
   function getEndlessDepth() {
     return Math.max(0, game.score - game.endlessStartScore);
   }
 
   function getEndlessScale() {
-    return 1 + getEndlessDepth() / 30000;
+    return 1 + getEndlessDepth() / 45000;
   }
 
   function getEndlessBossInterval() {
-    return Math.max(4600, 7600 - Math.floor(getEndlessDepth() / 10));
+    return Math.max(6000, 9600 - Math.floor(getEndlessDepth() / 14));
   }
 
   function getEndlessStageBonus() {
-    return 1 + Math.floor(getEndlessDepth() / 14000);
+    return Math.floor(getEndlessDepth() / 16000);
   }
 
   function pickEnemyForEndless() {
     const depth = getEndlessDepth();
     if (depth < 5000) {
-      return pickOne(["scout", "scout", "lancer"]);
+      return pickOne(["scout", "scout", "scout", "lancer"]);
     }
     if (depth < 12000) {
-      return pickOne(["scout", "lancer", "lancer", "orbiter"]);
+      return pickOne(["scout", "scout", "lancer", "lancer", "orbiter"]);
     }
     if (depth < 22000) {
-      return pickOne(["scout", "lancer", "orbiter", "orbiter", "fortress"]);
+      return pickOne(["scout", "lancer", "lancer", "orbiter", "orbiter", "fortress"]);
     }
     return pickEnemyForStage();
   }
@@ -661,8 +700,8 @@
     game.endless = true;
     game.stageIndex = STAGES.length - 1;
     game.endlessBossWaveActive = false;
-    game.spawnTimer = 0.95;
-    game.bossMinionTimer = 2.8;
+    game.spawnTimer = 1.15;
+    game.bossMinionTimer = 3.2;
     game.endlessStartScore = game.score;
     game.endlessBossInterval = getEndlessBossInterval();
     game.nextEndlessBossScore = game.score + game.endlessBossInterval;
@@ -702,12 +741,12 @@
 
   function spawnEndlessBossWave() {
     const depth = getEndlessDepth();
-    const count = Math.min(3, 1 + Math.floor(Math.max(0, depth - 22000) / 18000));
+    const count = Math.min(3, 1 + Math.floor(Math.max(0, depth - 34000) / 22000));
     const spread = W / (count + 1);
     for (let i = 0; i < count; i += 1) {
       const bossIndex = clamp(Math.floor(rand(1, BOSS_ORDER.length)), 1, BOSS_ORDER.length - 1);
       const boss = createBoss(BOSS_ORDER[bossIndex], {
-        scale: 1 + (getEndlessScale() - 1) * 0.65,
+        scale: 1 + (getEndlessScale() - 1) * 0.55,
         x: spread * (i + 1)
       });
       game.bosses.push(boss);
@@ -728,14 +767,14 @@
       if (game.spawnTimer <= 0 && game.enemies.length < 18) {
         const scale = getEndlessScale();
         const depth = getEndlessDepth();
-        const burst = clamp(Math.floor(depth / 14000) + 1, 1, 3);
+        const burst = clamp(Math.floor(depth / 18000) + 1, 1, 3);
         for (let i = 0; i < burst; i += 1) {
           spawnEnemy(pickEnemyForEndless(), {
             scale,
             stageBonus: getEndlessStageBonus()
           });
         }
-        game.spawnTimer = Math.max(0.42, 1.02 - (scale - 1) * 0.14);
+        game.spawnTimer = Math.max(0.55, 1.18 - (scale - 1) * 0.12);
       }
 
       if (!game.endlessBossWaveActive && game.score >= game.nextEndlessBossScore) {
@@ -749,7 +788,7 @@
             scale: getEndlessScale(),
             stageBonus: getEndlessStageBonus()
           });
-          game.bossMinionTimer = Math.max(1.7, 2.8 - (getEndlessScale() - 1) * 0.25);
+          game.bossMinionTimer = Math.max(1.95, 3.2 - (getEndlessScale() - 1) * 0.2);
         }
       }
       return;
@@ -795,7 +834,7 @@
       vy: Math.sin(angle) * speed,
       radius,
       damage: Math.round(game.player.attack * damageScale),
-      life: 3,
+      life: Infinity,
       color: baseColor,
       outlineColor: "",
       baseColor,
@@ -999,73 +1038,92 @@
     boss.burstTimer -= dt;
     boss.phaseTimer += dt;
     boss.summonTimer -= dt;
+    updateBossPhase(boss);
+    const phase = boss.phase;
 
     if (boss.bossKind === "hornet") {
-      boss.x = W / 2 + Math.sin(boss.age * 1.1 + boss.movePhase) * 260;
-      boss.y = 96 + Math.sin(boss.age * 2.1) * 12;
+      boss.x = W / 2 + Math.sin(boss.age * (phase === 2 ? 1.35 : 1.1) + boss.movePhase) * (phase === 2 ? 310 : 260);
+      boss.y = 96 + Math.sin(boss.age * (phase === 2 ? 2.8 : 2.1)) * 12;
       if (boss.fireTimer <= 0) {
-        fireSpread(boss, 7, 0.34 * PI, 0.66 * PI, 260, 18, 5, "#ffb86d");
-        boss.fireTimer = 1.05;
+        fireSpread(boss, phase === 2 ? 9 : 7, 0.32 * PI, 0.68 * PI, phase === 2 ? 285 : 260, phase === 2 ? 20 : 18, 5, "#ffb86d");
+        boss.fireTimer = phase === 2 ? 0.72 : 1.05;
       }
       if (boss.burstTimer <= 0) {
         fireAimedBullet(boss, player.x, player.y, 320, 19, 5.6, "#ffe08a");
         fireAimedBullet(boss, player.x - 32, player.y, 300, 16, 4.8, "#ffd0a1");
         fireAimedBullet(boss, player.x + 32, player.y, 300, 16, 4.8, "#ffd0a1");
-        boss.burstTimer = 2.2;
+        if (phase === 2) {
+          fireAimedBullet(boss, player.x - 64, player.y, 330, 17, 4.8, "#ffd0a1");
+          fireAimedBullet(boss, player.x + 64, player.y, 330, 17, 4.8, "#ffd0a1");
+        }
+        boss.burstTimer = phase === 2 ? 1.45 : 2.2;
       }
     } else if (boss.bossKind === "manta") {
-      boss.x = W / 2 + Math.sin(boss.age * 0.9 + boss.movePhase) * 250;
+      boss.x = W / 2 + Math.sin(boss.age * (phase === 2 ? 1.1 : 0.9) + boss.movePhase) * (phase === 2 ? 290 : 250);
       boss.y = 118 + Math.sin(boss.age * 1.4) * 18;
       if (boss.fireTimer <= 0) {
-        fireSpread(boss, 8, 0.28 * PI, 0.72 * PI, 250, 19, 5.2, "#8adfff");
-        boss.fireTimer = 1.3;
+        fireSpread(boss, phase === 2 ? 11 : 8, 0.25 * PI, 0.75 * PI, phase === 2 ? 280 : 250, phase === 2 ? 21 : 19, 5.2, "#8adfff");
+        boss.fireTimer = phase === 2 ? 0.92 : 1.3;
       }
       if (boss.burstTimer <= 0) {
         const aim = Math.atan2(player.y - boss.y, player.x - boss.x);
-        for (let i = -2; i <= 2; i += 1) {
+        for (let i = (phase === 2 ? -3 : -2); i <= (phase === 2 ? 3 : 2); i += 1) {
           fireEnemyBullet(boss, aim + i * 0.08, 360 - Math.abs(i) * 25, 17, 4.8, "#c8f2ff");
         }
-        boss.burstTimer = 2.6;
+        boss.burstTimer = phase === 2 ? 1.8 : 2.6;
       }
     } else if (boss.bossKind === "core") {
-      boss.x = W / 2 + Math.sin(boss.age * 0.7 + boss.movePhase) * 170;
+      boss.x = W / 2 + Math.sin(boss.age * (phase === 2 ? 0.95 : 0.7) + boss.movePhase) * (phase === 2 ? 220 : 170);
       boss.y = 110 + Math.sin(boss.age * 1.2) * 26;
-      boss.spiralAngle += dt * 1.8;
+      boss.spiralAngle += dt * (phase === 2 ? 2.55 : 1.8);
       if (boss.fireTimer <= 0) {
         fireEnemyBullet(boss, boss.spiralAngle, 260, 18, 5, "#bfc6ff");
         fireEnemyBullet(boss, boss.spiralAngle + PI, 260, 18, 5, "#bfc6ff");
         fireEnemyBullet(boss, boss.spiralAngle + PI / 2, 250, 17, 4.7, "#e6c4ff");
         fireEnemyBullet(boss, boss.spiralAngle + PI * 1.5, 250, 17, 4.7, "#e6c4ff");
-        boss.fireTimer = 0.15;
+        if (phase === 2) {
+          fireEnemyBullet(boss, boss.spiralAngle + PI / 4, 270, 19, 5.2, "#9fb8ff");
+          fireEnemyBullet(boss, boss.spiralAngle + PI * 1.25, 270, 19, 5.2, "#9fb8ff");
+        }
+        boss.fireTimer = phase === 2 ? 0.1 : 0.15;
       }
       if (boss.burstTimer <= 0) {
-        fireSpread(boss, 12, 0.1 * PI, 0.9 * PI, 220, 20, 5.8, "#89a4ff");
-        boss.burstTimer = 2.8;
+        fireSpread(boss, phase === 2 ? 16 : 12, 0.05 * PI, 0.95 * PI, phase === 2 ? 245 : 220, phase === 2 ? 22 : 20, 5.8, "#89a4ff");
+        boss.burstTimer = phase === 2 ? 1.95 : 2.8;
       }
     } else if (boss.bossKind === "carrier") {
-      boss.x = W / 2 + Math.sin(boss.age * 0.55 + boss.movePhase) * 210;
+      boss.x = W / 2 + Math.sin(boss.age * (phase === 2 ? 0.72 : 0.55) + boss.movePhase) * (phase === 2 ? 250 : 210);
       boss.y = 102 + Math.sin(boss.age) * 14;
       if (boss.fireTimer <= 0) {
-        fireSpread(boss, 6, 0.31 * PI, 0.69 * PI, 255, 21, 5.6, "#a2ffd5");
+        fireSpread(boss, phase === 2 ? 8 : 6, 0.28 * PI, 0.72 * PI, phase === 2 ? 275 : 255, phase === 2 ? 23 : 21, 5.6, "#a2ffd5");
         fireAimedBullet(boss, player.x, player.y, 280, 22, 6.4, "#fff09f");
-        boss.fireTimer = 1.25;
+        if (phase === 2) {
+          fireAimedBullet(boss, player.x - 54, player.y, 300, 20, 5.4, "#fff09f");
+          fireAimedBullet(boss, player.x + 54, player.y, 300, 20, 5.4, "#fff09f");
+        }
+        boss.fireTimer = phase === 2 ? 0.9 : 1.25;
       }
       if (boss.burstTimer <= 0) {
         spawnEnemy("scout", { x: boss.x - 48, y: boss.y + 12, stageBonus: 4 });
         spawnEnemy("fortress", { x: boss.x + 52, y: boss.y + 20, stageBonus: 4, scale: 1 });
-        boss.burstTimer = 4.6;
+        if (phase === 2) {
+          spawnEnemy("lancer", { x: boss.x, y: boss.y + 26, stageBonus: 4, scale: 1 });
+        }
+        boss.burstTimer = phase === 2 ? 3.1 : 4.6;
       }
     } else if (boss.bossKind === "seraph") {
       const hpRatio = boss.hp / boss.maxHp;
-      boss.x = W / 2 + Math.sin(boss.age * (hpRatio < 0.5 ? 1.35 : 0.82) + boss.movePhase) * (hpRatio < 0.5 ? 290 : 210);
+      const frenzyPhase = phase === 3 ? 1.55 : phase === 2 ? 1.08 : 0.82;
+      const moveRange = phase === 3 ? 320 : phase === 2 ? 260 : 210;
+      boss.x = W / 2 + Math.sin(boss.age * frenzyPhase + boss.movePhase) * moveRange;
       boss.y = 102 + Math.sin(boss.age * 1.35) * 22;
       boss.dashTimer -= dt;
       if (boss.fireTimer <= 0) {
-        fireSpread(boss, hpRatio < 0.35 ? 11 : 8, 0.24 * PI, 0.76 * PI, hpRatio < 0.35 ? 290 : 260, 24, 5.8, "#ffaae8");
-        boss.fireTimer = hpRatio < 0.35 ? 0.95 : 1.28;
+        fireSpread(boss, phase === 3 ? 12 : phase === 2 ? 10 : 8, 0.22 * PI, 0.78 * PI, phase === 3 ? 305 : phase === 2 ? 280 : 260, 24, 5.8, "#ffaae8");
+        boss.fireTimer = phase === 3 ? 0.8 : phase === 2 ? 1.02 : 1.28;
       }
       if (boss.burstTimer <= 0) {
-        const lanes = hpRatio < 0.45 ? [-190, -70, 70, 190] : [-140, 0, 140];
+        const lanes = phase === 3 ? [-230, -120, 0, 120, 230] : phase === 2 ? [-190, -70, 70, 190] : [-140, 0, 140];
         for (const offset of lanes) {
           game.enemyBullets.push({
             x: boss.x + offset,
@@ -1078,17 +1136,20 @@
             life: 3.8
           });
         }
-        boss.burstTimer = hpRatio < 0.45 ? 2.1 : 2.8;
+        boss.burstTimer = phase === 3 ? 1.55 : phase === 2 ? 2.1 : 2.8;
       }
-      if (boss.dashTimer <= 0 && hpRatio < 0.55) {
+      if (boss.dashTimer <= 0 && phase >= 2) {
         const dir = normalize(player.x - boss.x, 180);
-        boss.x += dir.x * 70;
-        boss.dashTimer = hpRatio < 0.25 ? 1.2 : 1.8;
+        boss.x += dir.x * (phase === 3 ? 92 : 70);
+        boss.dashTimer = phase === 3 ? 1 : 1.55;
         createBurst(boss.x, boss.y, boss.color, 16, 2.6);
       }
-      if (boss.summonTimer <= 0 && hpRatio < 0.68) {
+      if (boss.summonTimer <= 0 && phase >= 2) {
         spawnEnemy("phantom", { x: clamp(boss.x + rand(-120, 120), 60, W - 60), y: boss.y + 24, stageBonus: 5 });
-        boss.summonTimer = hpRatio < 0.3 ? 2.4 : 3.4;
+        if (phase === 3) {
+          spawnEnemy("orbiter", { x: clamp(boss.x + rand(-160, 160), 60, W - 60), y: boss.y + 20, stageBonus: 5 });
+        }
+        boss.summonTimer = phase === 3 ? 2 : 3.1;
       }
     }
   }
@@ -1740,6 +1801,7 @@
     ctx.shadowColor = boss.color;
     ctx.shadowBlur = 26;
 
+    const phase = boss.phase || 1;
     const pulse = 0.7 + (Math.sin(boss.age * 2.8) + 1) * 0.16;
     const glow = ctx.createRadialGradient(0, -4, 8, 0, 0, boss.radius + 42);
     glow.addColorStop(0, `${boss.color}66`);
@@ -1819,6 +1881,16 @@
       ctx.moveTo(12, -44);
       ctx.lineTo(34, -68);
       ctx.stroke();
+      if (phase >= 2) {
+        ctx.strokeStyle = "rgba(255, 255, 210, 0.9)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-18, 48);
+        ctx.lineTo(-42, 72);
+        ctx.moveTo(18, 48);
+        ctx.lineTo(42, 72);
+        ctx.stroke();
+      }
     } else if (boss.bossKind === "manta") {
       ctx.fillStyle = "rgba(255,255,255,0.1)";
       ctx.beginPath();
@@ -1879,6 +1951,16 @@
       ctx.beginPath();
       ctx.ellipse(0, -10, 12, 20, 0, 0, PI * 2);
       ctx.fill();
+      if (phase >= 2) {
+        ctx.strokeStyle = "rgba(203, 247, 255, 0.92)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-92, 16);
+        ctx.lineTo(-126, 42);
+        ctx.moveTo(92, 16);
+        ctx.lineTo(126, 42);
+        ctx.stroke();
+      }
     } else if (boss.bossKind === "core") {
       ctx.rotate(boss.age * 0.12);
       ctx.strokeStyle = "rgba(236, 232, 255, 0.82)";
@@ -1923,6 +2005,13 @@
       ctx.moveTo(42, -42);
       ctx.lineTo(-42, 42);
       ctx.stroke();
+      if (phase >= 2) {
+        ctx.strokeStyle = "rgba(247, 238, 255, 0.78)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 88 + Math.sin(boss.age * 6) * 4, 0, PI * 2);
+        ctx.stroke();
+      }
     } else if (boss.bossKind === "carrier") {
       ctx.fillStyle = boss.color;
       ctx.beginPath();
@@ -1974,6 +2063,11 @@
       ctx.moveTo(92, 12);
       ctx.lineTo(120, 30);
       ctx.stroke();
+      if (phase >= 2) {
+        ctx.fillStyle = "rgba(255, 247, 196, 0.92)";
+        ctx.fillRect(-10, -30, 20, 10);
+        ctx.fillRect(-10, 20, 20, 10);
+      }
     } else if (boss.bossKind === "seraph") {
       ctx.strokeStyle = "rgba(255, 226, 248, 0.85)";
       ctx.lineWidth = 3;
@@ -2039,6 +2133,23 @@
       ctx.beginPath();
       ctx.arc(0, -10, 10, 0, PI * 2);
       ctx.fill();
+      if (phase >= 2) {
+        ctx.strokeStyle = "rgba(255, 231, 250, 0.92)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-84, -22);
+        ctx.lineTo(-118, -48);
+        ctx.moveTo(84, -22);
+        ctx.lineTo(118, -48);
+        ctx.stroke();
+      }
+      if (phase >= 3) {
+        ctx.strokeStyle = "rgba(255, 247, 255, 0.94)";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(0, -82, 28 + Math.sin(boss.age * 7) * 2, 0, PI * 2);
+        ctx.stroke();
+      }
     }
 
     ctx.restore();
